@@ -32,11 +32,12 @@ This repository contains a proof of concept and is notably built with:
 ## Installation
 
 ```bash
-# Example installation steps
 $ git clone https://github.com/trbknl/local-modeler.git
 $ cd local-modeler
 $ npm i
 ```
+
+Make sure you have [Poetry](https://python-poetry.org/) installed.
 
 Make sure you have a Redis database running, for example with Docker:
 

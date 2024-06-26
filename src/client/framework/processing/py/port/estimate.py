@@ -64,12 +64,12 @@ def learn_params(df: pd.DataFrame, x_colnames: list[str], y_colname: str, params
 # Example usage
 # Generate some synthetic data for testing
 
-np.random.seed()
-n = 50
-x = np.random.randn(n, 2)
-true_params = np.array([-10, -2])
-y = np.dot(x, true_params) + np.random.randn(n) * 0.5  # y = 3*x1 - 2*x2 + noise
-
-df = pd.DataFrame(np.hstack((x, y.reshape(-1, 1))), columns=['x1', 'x2', 'y'])
-
-learn_params(df, ["x1", "x2"], "y", [1, 2])
+#np.random.seed()
+#n = 50
+#x = np.random.randn(n, 2)
+#true_params = np.array([-10, -2])
+#y = np.dot(x, true_params) + np.random.randn(n) * 0.5  # y = 3*x1 - 2*x2 + noise
+#
+#df = pd.DataFrame(np.hstack((x, y.reshape(-1, 1))), columns=['x1', 'x2', 'y'])
+#
+#learn_params(df, ["x1", "x2"], "y", [1, 2])

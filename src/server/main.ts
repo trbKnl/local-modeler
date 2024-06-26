@@ -22,36 +22,36 @@ app.use(express.json());
 var runs: Run[] = [
   {
     id: "asd1",
-    initialParameters: { values: [1, 2, 3], length: 3},
-    currentParameters: { values: [1, 2, 3], length: 3},
+    initialParameters: { values: [1, 2], length: 2},
+    currentParameters: { values: [1, 2], length: 2},
     updatedBy: ["UserA", "UserB"],
     checkValue: "1"
   },
   {
     id: "asd2",
-    initialParameters: { values: [1, 2, 3], length: 3},
-    currentParameters: { values: [1, 2, 3], length: 3},
+    initialParameters: { values: [1, 2], length: 2},
+    currentParameters: { values: [1, 2], length: 2},
     updatedBy: ["UserA", "UserB"],
     checkValue: "2"
   },
   {
     id: "asd3",
-    initialParameters: { values: [1, 2, 3], length: 3},
-    currentParameters: { values: [1, 2, 3], length: 3},
+    initialParameters: { values: [1, 2], length: 2},
+    currentParameters: { values: [1, 2], length: 2},
     updatedBy: ["UserA", "UserB"],
     checkValue: "3"
   },
   {
     id: "asd4",
-    initialParameters: { values: [1, 2, 3], length: 3},
-    currentParameters: { values: [1, 2, 3], length: 3},
+    initialParameters: { values: [1, 2], length: 2},
+    currentParameters: { values: [1, 2], length: 2},
     updatedBy: ["UserA", "UserB"],
     checkValue: "4"
   },
   {
     id: "asd5",
-    initialParameters: { values: [1, 2, 3], length: 3},
-    currentParameters: { values: [1, 2, 3], length: 3},
+    initialParameters: { values: [1, 2], length: 2},
+    currentParameters: { values: [1, 2], length: 2},
     updatedBy: ["UserA", "UserB"],
     checkValue: "5"
   },

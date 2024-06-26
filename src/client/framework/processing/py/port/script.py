@@ -1,5 +1,7 @@
 import json
 import zipfile
+from pathlib import Path
+import io
 
 import pandas as pd
 
@@ -34,25 +36,19 @@ def process(session_id: str):
             # The file the participant submitted is valid
             if is_data_valid == True:
 
-                # Extract the data you as a researcher are interested in, and put it in a pandas DataFrame
-                # Show this data to the participant in a table on screen
-                # The participant can now decide to donate
-                extracted_data = extract_the_data_you_are_interested_in(file_prompt_result.value)
-                consent_prompt = generate_consent_prompt(extracted_data)
-                consent_prompt_result = yield render_page(platform, consent_prompt)
+                df = extract(file_prompt_result.value)
 
-                # If the participant wants to donate the data gets donated
-                if consent_prompt_result.__type__ == "PayloadJSON":
+                result = yield getParameters()
+                while result.value != None:
+                    print(f"[Python script] received {result.value}")
+
+                    client_run = json.loads(result.value)
+                    new_parameters = estimate.learn_params(df, ["x1", "x2"], "y", client_run["parameters"]["values"])
+                    client_run["parameters"]["values"] = new_parameters
+
+                    yield postParameters(client_run)
                     result = yield getParameters()
-                    while result.value != None:
-                        print(f"[Python script] received {result.value}")
 
-
-                        client_run = json.loads(result.value)
-                        params estimate.learn_params
-
-                        yield postParameters()
-                        result = yield getParameters()
                 break
 
             # Sad flow:
@@ -76,32 +72,28 @@ def process(session_id: str):
     yield render_end_page()
 
 
-def extract_the_data_you_are_interested_in(zip_file: str) -> pd.DataFrame:
-    """
-    This function extracts the data the researcher is interested in
 
-    In this case we extract from the zipfile:
-    * The file names
-    * The compressed file size
-    * The file size
-
-    You could extract anything here
+def extract(zip_file: str) -> pd.DataFrame:
     """
+    This function excpects the example data from the data folder
+    """
+    file_of_interest = "data.json"
     out = pd.DataFrame()
 
     try:
         file = zipfile.ZipFile(zip_file)
-        data = []
         for name in file.namelist():
-            info = file.getinfo(name)
-            data.append((name, info.compress_size, info.file_size))
-
-        out = pd.DataFrame(data, columns=["File name", "Compressed file size", "File size"])
+            fp = Path(name)
+            if fp.name == file_of_interest:
+                with file.open(name) as json_data:
+                    json_str = io.StringIO(json_data.read().decode('utf-8'))
+                    out = pd.read_json(json_str)
 
     except Exception as e:
         print(f"Something went wrong: {e}")
 
     return out
+
 
 
 def validate_the_participants_input(zip_file: str) -> bool:
