@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 
-// SERVER
+// Parameters
 
 export const ParametersSchema = z.object({
   values: z.array(z.number()),
@@ -10,15 +10,8 @@ export const ParametersSchema = z.object({
 
 export type Parameters = z.infer<typeof ParametersSchema>
 
-export const RunSchema = z.object({
-  id: z.string(),
-  initialParameters: ParametersSchema,
-  currentParameters: ParametersSchema,
-  updatedBy: z.array(z.string()),
-  checkValue: z.string(),
-})
 
-export type Run = z.infer<typeof RunSchema>
+// Participant run tracker 
 
 export const ParticipantRunTrackerSchema  = z.object({
   participantId: z.string(),
@@ -29,13 +22,28 @@ export const ParticipantRunTrackerSchema  = z.object({
 export type ParticipantRunTracker = z.infer<typeof ParticipantRunTrackerSchema>
 
 
-// CLIENT
+// Run
 
-export const ClientRunSchema = z.object({
+const BaseRunSchema = z.object({
   id: z.string(),
-  parameters: ParametersSchema,
   checkValue: z.string(),
+});
+
+// Client run
+
+export const ClientRunSchema = BaseRunSchema.extend({
+  parameters: ParametersSchema,
 })
 
 export type ClientRun = z.infer<typeof ClientRunSchema>
 
+
+// Server Run
+
+export const RunSchema = BaseRunSchema.extend({
+  initialParameters: ParametersSchema,
+  currentParameters: ParametersSchema,
+  updatedBy: z.array(z.string()),
+})
+
+export type Run = z.infer<typeof RunSchema>
