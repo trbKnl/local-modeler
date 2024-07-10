@@ -10,13 +10,11 @@ export const ParametersSchema = z.object({
 
 export type Parameters = z.infer<typeof ParametersSchema>
 
-
 // Participant run tracker 
 
 export const ParticipantRunTrackerSchema  = z.object({
   participantId: z.string(),
   hasUpdatedRunIds: z.array(z.string()),
-  completed: z.boolean().default(false),
 })
 
 export type ParticipantRunTracker = z.infer<typeof ParticipantRunTrackerSchema>
@@ -28,6 +26,7 @@ const BaseRunSchema = z.object({
   id: z.string(),
   checkValue: z.string(),
 });
+
 
 // Client run
 

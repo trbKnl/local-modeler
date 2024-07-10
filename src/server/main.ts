@@ -1,7 +1,6 @@
 import http from "http"
 import express, { Request, Response } from "express";
 import ViteExpress from "vite-express";
-
 import { v4 as uuidv4 } from "uuid"
 import { Redis } from 'ioredis'
 import { MutexManager } from "./mutexManager"
@@ -43,7 +42,6 @@ async function getParticipantRunTracker(participantId: string): Promise<Particip
     const newTracker: ParticipantRunTracker = {
       participantId: participantId,
       hasUpdatedRunIds: [],
-      completed: false,
     }
     await store.save(`participantid:${participantId}`, newTracker)
     return newTracker
@@ -54,10 +52,7 @@ async function getParticipantRunTracker(participantId: string): Promise<Particip
 
 // GET
 
-async function getClientRun(participantId: string): Promise<ClientRun | undefined> {
-  const tracker = await getParticipantRunTracker(participantId)
-  const uncompletedRunIds = allParameterRunIds.filter(id => !tracker.hasUpdatedRunIds.includes(id))
-
+async function getClientRun(uncompletedRunIds: string[]): Promise<ClientRun | undefined> {
   for (const runId of uncompletedRunIds) {
     const isRunLocked = await mutexManager.isLocked(runId)
     if (!isRunLocked) {
@@ -67,19 +62,17 @@ async function getClientRun(participantId: string): Promise<ClientRun | undefine
 
       // update checkValue
       const run = await store.loadValidation<Run>(`run:${runId}`, RunSchema)
-      if (run === undefined) { break }
+      if (run === undefined) { throw new Error("Run is undefined") }
       run.checkValue = uuidv4()
       await store.save(`run:${runId}`, run)
 
-      console.log(`[Get Api] sending ${runId} to ${participantId}`)
       return { 
         id: runId, 
         checkValue: run.checkValue, 
-        parameters: run.currentParameters 
+        parameters: run.currentParameters,
       }
     }
   }
-  console.log(`[Get Api] no eligible runs found for ${participantId}`)
 }
 
 app.get('/api', async (req: Request, res: Response) => {
@@ -89,9 +82,16 @@ app.get('/api', async (req: Request, res: Response) => {
       return res.status(400).send('participantId must be a string');
     }
 
-    const data = await getClientRun(participantId)
+    const tracker = await getParticipantRunTracker(participantId)
+    const uncompletedRunIds = allParameterRunIds.filter(id => !tracker.hasUpdatedRunIds.includes(id))
+
+    if (uncompletedRunIds.length === 0) {
+      return res.status(400).send('Participant is done, no runs left to process')
+    }
+
+    const data = await getClientRun(uncompletedRunIds)
     if (data === undefined) {
-      return res.status(400).send('Error happend or the participant is done');
+      return res.status(400).send('No runs are available');
     }
 
     console.log(`[Get Api] sending data: ${JSON.stringify(data)} to ${participantId}`)
