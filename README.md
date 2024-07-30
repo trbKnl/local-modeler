@@ -32,9 +32,9 @@ This repository contains a proof of concept and is notably built with:
 ## Installation
 
 ```bash
-$ git clone https://github.com/trbknl/local-modeler.git
-$ cd local-modeler
-$ npm i
+git clone https://github.com/trbknl/local-modeler.git
+cd local-modeler
+npm i
 ```
 
 Make sure you have [Poetry](https://python-poetry.org/) installed.
@@ -53,6 +53,3 @@ npm run dev
 
 ## Usage
 
-## License
-
-tbd

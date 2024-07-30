@@ -8,6 +8,16 @@ import { ObjectStore } from "./objectStore"
 import type { Run, ClientRun, ParticipantRunTracker } from "./types"
 import { RunSchema, ClientRunSchema, ParticipantRunTrackerSchema } from "./types"
 import * as initialize from "./initialize"
+import { writeObjectToJsonFile } from "./helpers"
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// CONFIG FILE DIR
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const PROJECTROOT = path.join(__dirname, '../..')
+console.log(PROJECTROOT)
 
 // INITIALIZE
 
@@ -121,6 +131,7 @@ async function postClientRun(participantId: string, clientRunResults: ClientRun)
     await mutexManager.release(runId)
 
     console.log(`[Post Api] update successfull ${runId} from ${participantId}`)
+    await writeObjectToJsonFile(`${PROJECTROOT}/study-results/${runId}.json`, run)
   } else {
     console.log(`[Post Api] update rejected ${runId} from ${participantId}`)
   }

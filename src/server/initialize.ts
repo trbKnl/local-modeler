@@ -1,45 +1,91 @@
+import { z } from 'zod'
+import fs from 'fs/promises';
 import { ObjectStore } from "./objectStore"
 import type { Run } from "./types"
+import { fileURLToPath } from 'url';
+import path from 'path';
+import { getRandomInt } from './helpers.ts';
+import { v4 as uuidv4 } from "uuid"
 
-// INITIALIZE PARAMETER RUNS
+// CONFIG FILE DIR
 
-const runs: Run[] = [
-  {
-    id: "asd1",
-    initialParameters: { values: [-1231, 2], length: 2},
-    currentParameters: { values: [1, 9238], length: 2},
-    updatedBy: ["UserA", "UserB"],
-    checkValue: "1"
-  },
-  {
-    id: "asd2",
-    initialParameters: { values: [1, 747], length: 2},
-    currentParameters: { values: [1, 2], length: 2},
-    updatedBy: ["UserA", "UserB"],
-    checkValue: "2"
-  },
-  {
-    id: "asd3",
-    initialParameters: { values: [1, 2], length: 2},
-    currentParameters: { values: [1, 2], length: 2},
-    updatedBy: ["UserA", "UserB"],
-    checkValue: "3"
-  },
-  {
-    id: "asd4",
-    initialParameters: { values: [1, 2], length: 2},
-    currentParameters: { values: [1, 2], length: 2},
-    updatedBy: ["UserA", "UserB"],
-    checkValue: "4"
-  },
-  {
-    id: "asd5",
-    initialParameters: { values: [1, 2], length: 2},
-    currentParameters: { values: [1, 2], length: 2},
-    updatedBy: ["UserA", "UserB"],
-    checkValue: "5"
-  },
-];
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const CONFIGPATH = path.join(__dirname, 'config', 'config.json')
+
+
+// STUDY CONFIG TYPE
+
+const ConfigSchema = z.object({
+  study: z.object({
+    random: z.boolean(),
+    nparams: z.number().int().positive(),
+    nruns: z.number().int().positive(),
+  })
+})
+
+type Config = z.infer<typeof ConfigSchema>
+
+async function readConfig(filePath: string): Promise<Config> {
+  try {
+
+    const fileContents = await fs.readFile(filePath, 'utf-8');
+    const jsonData = JSON.parse(fileContents);
+    const result = ConfigSchema.safeParse(jsonData);
+    
+    if (result.success) {
+      return result.data;
+    } else {
+      console.error('Config validation failed:', result.error.errors);
+      throw new Error('Invalid configuration');
+    }
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.error('Invalid JSON in config file:', error.message);
+    } else if (error instanceof Error) {
+      console.error('Error reading or parsing config file:', error.message);
+    } else {
+      console.error('Unknown error occurred')
+    }
+    throw error;
+  }
+}
+
+const config = await readConfig(CONFIGPATH);
+
+
+// LOG SETTINGS
+
+console.log("Study is started with these parameter settings")
+console.log(config)
+
+
+// INITIALIZE RUNS
+
+function generateRunFromConfig(config: Config): Run {
+  const id = uuidv4()
+  const checkValue = uuidv4()
+  const parameterValues: number[] = Array.from({ length: config.study.nparams }, () => getRandomInt(-10, 10)); 
+  const run: Run = {
+    id: id,
+    initialParameters: { values: parameterValues, length: config.study.nparams},
+    currentParameters: { values: parameterValues, length: config.study.nparams},
+    updatedBy: [],
+    checkValue: checkValue
+  }
+
+  return run
+}
+
+const runs: Run[] = []
+
+if (config.study.random) {
+  for (let i = 0; i < config.study.nruns; i++) {
+    runs.push(generateRunFromConfig(config))
+  }
+} else {
+  throw(new Error("NOT YET IMPLEMENTED"))
+}
 
 export function getAllParameterRunIds(): string[] {
  return runs.map(item => item["id"]);

@@ -3,6 +3,10 @@
 /.pnp
 .pnp.js
 
+# exclude everything
+study-results/*
+!study-results/.gitkeep
+
 # testing
 /coverage
 
