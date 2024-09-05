@@ -1,7 +1,5 @@
 {
   "study": {
-    "random": true,
-    "nparams": 2,
     "nruns": 10
   }
 }

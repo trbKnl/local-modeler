@@ -43,8 +43,8 @@ def process(session_id: str):
                     print(f"[Python script] received {result.value}")
 
                     client_run = json.loads(result.value)
-                    new_parameters = estimate.learn_params(df, ["x1", "x2"], "y", client_run["parameters"]["values"])
-                    client_run["parameters"]["values"] = new_parameters
+                    new_parameters = estimate.learn_params(df, ["x1", "x2"], "y", client_run["model"])
+                    client_run["model"] = new_parameters
 
                     yield postParameters(client_run)
                     result = yield getParameters()
@@ -199,8 +199,8 @@ def getParameters():
 def postParameters(result):
     return CommandSystemPostParameters(
         id = result["id"],
-        parameters = result["parameters"],
         checkValue = result["checkValue"],
+        model = result["model"],
     )
 
 

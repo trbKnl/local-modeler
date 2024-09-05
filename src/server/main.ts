@@ -79,7 +79,7 @@ async function getClientRun(uncompletedRunIds: string[]): Promise<ClientRun | un
       return { 
         id: runId, 
         checkValue: run.checkValue, 
-        parameters: run.currentParameters,
+        model: run.model,
       }
     }
   }
@@ -120,10 +120,9 @@ async function postClientRun(participantId: string, clientRunResults: ClientRun)
   // if update succesfull update trackers and runs on the server and release the lock
   if (
     run.checkValue === clientRunResults.checkValue &&
-    run.currentParameters.length === clientRunResults.parameters.length &&
     !run.updatedBy.includes(participantId)
   ) {
-    run.currentParameters = clientRunResults.parameters
+    run.model = clientRunResults.model
     run.updatedBy.push(participantId)
     tracker.hasUpdatedRunIds.push(runId)
     await store.save(`run:${runId}`, run)

@@ -2,6 +2,7 @@ import numpy as np
 import autograd.numpy as anp
 from autograd import grad
 import pandas as pd
+import json
 
 
 def linear_model(params: anp.ndarray, x: anp.ndarray) -> anp.ndarray:
@@ -45,18 +46,24 @@ def sgd(x: np.ndarray, y: np.ndarray, params: np.ndarray, lr: float = 0.01, epoc
     return params
 
 
-def learn_params(df: pd.DataFrame, x_colnames: list[str], y_colname: str, params: list[float]) -> list[float]:
+def learn_params(df: pd.DataFrame, x_colnames: list[str], y_colname: str, params: str) -> str:
     # test_conditions_about_data(df)
     # if conditions fail do something
+
+    # if not initialized initialize parameters
+    if params == "not initialized":
+        current_params = [0, 0]
+    else:
+        current_params = json.loads(params)
 
     # convert to x and y
     x =  df.loc[:, x_colnames].values
     y =  df.loc[:, y_colname].values
-    params_array = np.array(params, dtype=np.float64)
+    params_array = np.array(current_params, dtype=np.float64)
 
     learned_params_sgd = sgd(x, y, params_array, lr=0.1, epochs=50, batch_size=len(x))
-
-    return learned_params_sgd.tolist()
+    new_params = json.dumps(learned_params_sgd.tolist())
+    return new_params
     
 
 #####################################################################################

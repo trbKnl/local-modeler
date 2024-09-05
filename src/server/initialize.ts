@@ -18,8 +18,6 @@ const CONFIGPATH = path.join(__dirname, 'config', 'config.json')
 
 const ConfigSchema = z.object({
   study: z.object({
-    random: z.boolean(),
-    nparams: z.number().int().positive(),
     nruns: z.number().int().positive(),
   })
 })
@@ -62,14 +60,12 @@ console.log(config)
 
 // INITIALIZE RUNS
 
-function generateRunFromConfig(config: Config): Run {
+function generateRun(): Run {
   const id = uuidv4()
   const checkValue = uuidv4()
-  const parameterValues: number[] = Array.from({ length: config.study.nparams }, () => getRandomInt(-10, 10)); 
   const run: Run = {
     id: id,
-    initialParameters: { values: parameterValues, length: config.study.nparams},
-    currentParameters: { values: parameterValues, length: config.study.nparams},
+    model: "not initialized",
     updatedBy: [],
     checkValue: checkValue
   }
@@ -79,12 +75,8 @@ function generateRunFromConfig(config: Config): Run {
 
 const runs: Run[] = []
 
-if (config.study.random) {
-  for (let i = 0; i < config.study.nruns; i++) {
-    runs.push(generateRunFromConfig(config))
-  }
-} else {
-  throw(new Error("NOT YET IMPLEMENTED"))
+for (let i = 0; i < config.study.nruns; i++) {
+    runs.push(generateRun())
 }
 
 export function getAllParameterRunIds(): string[] {

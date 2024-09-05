@@ -151,10 +151,10 @@ export function isCommandSystemGetParameters (arg: any): arg is CommandSystemGet
 export interface CommandSystemPostParameters {
   __type__: 'CommandSystemPostParameters'
   id: string,
-  parameters: number[], // type is not correct
+  model: string,
   checkValue: string,
 }
 export function isCommandSystemPostParameters (arg: any): arg is CommandSystemPostParameters {
-  return isInstanceOf<CommandSystemPostParameters>(arg, 'CommandSystemPostParameters', ["id", "parameters",  "checkValue"])
+  return isInstanceOf<CommandSystemPostParameters>(arg, 'CommandSystemPostParameters', ["id", "model",  "checkValue"])
 }
 

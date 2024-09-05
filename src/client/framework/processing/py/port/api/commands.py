@@ -56,14 +56,14 @@ class CommandSystemGetParameters:
 @dataclass
 class CommandSystemPostParameters:
     id: str
-    parameters: list[float] # not the correcr type 
+    model: str
     checkValue: str
 
     def toDict(self):
         dict = {}
         dict["__type__"] = "CommandSystemPostParameters"
         dict["id"] = self.id
-        dict["parameters"] = self.parameters
+        dict["model"] = self.model
         dict["checkValue"] = self.checkValue
         return dict
 
