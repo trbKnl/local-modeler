@@ -13,7 +13,8 @@ from port.api.commands import (
     CommandSystemGetParameters,
     CommandSystemPostParameters,
 )
-import port.estimate as estimate
+import port.ols as ols
+import port.lda as lda
 
 
 def process(session_id: str):
@@ -36,15 +37,22 @@ def process(session_id: str):
             # The file the participant submitted is valid
             if is_data_valid == True:
 
-                df = extract(file_prompt_result.value)
+                data = extract(file_prompt_result.value)
 
                 result = yield getParameters()
                 while result.value != None:
                     print(f"[Python script] received {result.value}")
 
                     client_run = json.loads(result.value)
-                    new_parameters = estimate.learn_params(df, ["x1", "x2"], "y", client_run["model"])
-                    client_run["model"] = new_parameters
+                    
+                    # regression example
+                    #df = pd.DataFrame(data)
+                    #model = ols.learn_params(df, ["x1", "x2"], "y", client_run["model"])
+
+                    # lda example
+                    model = lda.learn_params(data, client_run["model"])
+
+                    client_run["model"] = model
 
                     yield postParameters(client_run)
                     result = yield getParameters()
@@ -73,26 +81,20 @@ def process(session_id: str):
 
 
 
-def extract(zip_file: str) -> pd.DataFrame:
+def extract(zip_file: str, file_of_interest: str = "data.json"):
     """
-    This function excpects the example data from the data folder
+    Extract and return the JSON content of 'file_of_interest' from a zip file.
     """
-    file_of_interest = "data.json"
-    out = pd.DataFrame()
-
     try:
-        file = zipfile.ZipFile(zip_file)
-        for name in file.namelist():
-            fp = Path(name)
-            if fp.name == file_of_interest:
-                with file.open(name) as json_data:
-                    json_str = io.StringIO(json_data.read().decode('utf-8'))
-                    out = pd.read_json(json_str)
-
+        with zipfile.ZipFile(zip_file) as z:
+            for name in z.namelist():
+                fp = Path(name)
+                if fp.name == file_of_interest:
+                    with z.open(name) as f:
+                        return json.load(f)
     except Exception as e:
-        print(f"Something went wrong: {e}")
-
-    return out
+        print(f"Error extracting {file_of_interest}: {e}")
+        return None
 
 
 
