@@ -77,7 +77,7 @@ def load_lda_model(serialized_model: str) -> LatentDirichletAllocation:
 
 
 def learn_params(data, model: str) -> str:
-    # TODO check conditions of data
+    # TODO: check conditions of data
 
     lda = load_lda_model(model)
 

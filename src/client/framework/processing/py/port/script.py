@@ -198,6 +198,7 @@ def donate(key, json_string):
 def getParameters():
     return CommandSystemGetParameters()
 
+
 def postParameters(result):
     return CommandSystemPostParameters(
         id = result["id"],
@@ -208,5 +209,3 @@ def postParameters(result):
 
 def exit_port(code, info):
     return CommandSystemExit(code, info)
-
-

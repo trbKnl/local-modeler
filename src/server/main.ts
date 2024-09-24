@@ -60,28 +60,35 @@ async function getParticipantRunTracker(participantId: string): Promise<Particip
   }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // GET
 
-async function getClientRun(uncompletedRunIds: string[]): Promise<ClientRun | undefined> {
-  for (const runId of uncompletedRunIds) {
-    const isRunLocked = await mutexManager.isLocked(runId)
-    if (!isRunLocked) {
+async function getClientRun(uncompletedRunIds: string[], maxAttempts = 3): Promise<ClientRun | undefined> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    for (const runId of uncompletedRunIds) {
+      const isRunLocked = await mutexManager.isLocked(runId)
+      if (!isRunLocked) {
 
-      // lock mutex 
-      await mutexManager.lock(runId)
+        // lock mutex 
+        await mutexManager.lock(runId)
 
-      // update checkValue
-      const run = await store.loadValidation<Run>(`run:${runId}`, RunSchema)
-      if (run === undefined) { throw new Error("Run is undefined") }
-      run.checkValue = uuidv4()
-      await store.save(`run:${runId}`, run)
+        // update checkValue
+        const run = await store.loadValidation<Run>(`run:${runId}`, RunSchema)
+        if (run === undefined) { throw new Error("Run is undefined") }
+        run.checkValue = uuidv4()
+        await store.save(`run:${runId}`, run)
 
-      return { 
-        id: runId, 
-        checkValue: run.checkValue, 
-        model: run.model,
+        return { 
+          id: runId, 
+          checkValue: run.checkValue, 
+          model: run.model,
+        }
       }
     }
+    await sleep(1000)
   }
 }
 
@@ -100,12 +107,12 @@ app.get('/api', async (req: Request, res: Response) => {
     }
 
     const data = await getClientRun(uncompletedRunIds)
-    if (data === undefined) {
+    if (data !== undefined) {
+      console.log(`[Get Api] sending data: ${JSON.stringify(data)} to ${participantId}`)
+      return res.status(200).json(data)
+    } else {
       return res.status(400).send('No runs are available');
     }
-
-    console.log(`[Get Api] sending data: ${JSON.stringify(data)} to ${participantId}`)
-    return res.status(200).json(data)
 });
 
 
