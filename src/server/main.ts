@@ -174,7 +174,7 @@ ViteExpress.bind(app, server, async () => {
   // Vite tries forces a page reload before the server is ready
   // This prevents the server from being reached alltogether unless its ready
   server.listen(port, () => {
-    console.log("Server is ready")
+    console.log(`Server is ready at port ${port}`)
   })
 });
 
