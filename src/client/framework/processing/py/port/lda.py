@@ -50,7 +50,8 @@ def save_lda_model(lda: LatentDirichletAllocation) -> str:
 
 def load_lda_model(serialized_model: str) -> LatentDirichletAllocation:
     if serialized_model == "not initialized":
-        lda = LatentDirichletAllocation(n_components=3, learning_method='online', max_iter=1, random_state=0)
+        # random start the model
+        lda = LatentDirichletAllocation(n_components=3, learning_method='online', max_iter=1)
         return lda
 
     model: dict = json.loads(serialized_model)
