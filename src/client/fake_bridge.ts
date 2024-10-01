@@ -80,9 +80,10 @@ async function postData(url: string, data: any): Promise<void> {
 function constructApiUrl(): string {
   const queryParams = new URLSearchParams(window.location.search);
   const participantId = queryParams.get('participantId');
-  if (participantId === null) {
-    throw new Error("You must give a participantId")
+  const studyId = queryParams.get('studyId');
+  if (participantId === null || studyId === null) {
+    throw new Error("You must give a participantId and studyId as query parameters")
   }
-  const url = `/api/?participantId=${participantId}`
+  const url = `/api/?participantId=${participantId}&studyId=${studyId}`
   return url
 }

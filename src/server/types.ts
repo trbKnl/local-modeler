@@ -1,21 +1,21 @@
 import { z } from 'zod'
 
-
 // Participant run tracker 
 
-export const ParticipantRunTrackerSchema  = z.object({
+export const ParticipantTrackerSchema  = z.object({
   participantId: z.string(),
+  studyId: z.string(),
   hasUpdatedRunIds: z.array(z.string()),
 })
 
-export type ParticipantRunTracker = z.infer<typeof ParticipantRunTrackerSchema>
+export type ParticipantTracker = z.infer<typeof ParticipantTrackerSchema>
 
 
 // Run
 
 const BaseRunSchema = z.object({
-  id: z.string(),
-  checkValue: z.string(),
+  id: z.string().uuid(),
+  checkValue: z.string().uuid(),
   model: z.string(),
 });
 
@@ -33,3 +33,25 @@ export const RunSchema = BaseRunSchema.extend({
 })
 
 export type Run = z.infer<typeof RunSchema>
+
+// Configuration
+
+export const ConfigSchema = z.object({
+  study: z.object({
+    nruns: z.number().int().positive(),
+  }),
+  nstudies: z.number().int()
+})
+
+
+export type Config = z.infer<typeof ConfigSchema>
+
+
+// Query parameters
+
+export const QueryParameterSchema = z.object({
+  studyId: z.string().min(1).max(255).regex(/^[a-zA-Z0-9_-]+$/),
+  participantId: z.string().min(1).max(255).regex(/^[a-zA-Z0-9_-]+$/),
+});
+
+export type QueryParameters = z.infer<typeof QueryParameterSchema>;

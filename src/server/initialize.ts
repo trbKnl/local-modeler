@@ -1,28 +1,54 @@
-import { z } from 'zod'
 import fs from 'fs/promises';
 import { ObjectStore } from "./objectStore"
-import type { Run } from "./types"
+import type { 
+  Run, 
+  Config
+} from "./types"
+import { ConfigSchema } from "./types"
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { getRandomInt } from './helpers.ts';
 import { v4 as uuidv4 } from "uuid"
 
 // CONFIG FILE DIR
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+export const PROJECTROOT = path.join(__dirname, '../..')
 const CONFIGPATH = path.join(__dirname, 'config', 'config.json')
 
+const config = await readConfig(CONFIGPATH);
 
-// STUDY CONFIG TYPE
 
-const ConfigSchema = z.object({
-  study: z.object({
-    nruns: z.number().int().positive(),
-  })
-})
+// LOG SETTINGS
 
-type Config = z.infer<typeof ConfigSchema>
+console.log("Study is started with these parameter settings")
+console.log(config)
+
+
+// Populate runs from file or create new ones
+
+const runs: Run[] = []
+
+for (let j = 0; j < config.nstudies; j++) {
+  for (let i = 0; i < config.study.nruns; i++) {
+      runs.push(generateRun())
+  }
+}
+
+
+
+function generateRun(): Run {
+  const id = uuidv4()
+  const checkValue = uuidv4()
+  const run: Run = {
+    id: id,
+    model: "not initialized",
+    updatedBy: [],
+    checkValue: checkValue
+  }
+
+  return run
+}
 
 async function readConfig(filePath: string): Promise<Config> {
   try {
@@ -49,35 +75,8 @@ async function readConfig(filePath: string): Promise<Config> {
   }
 }
 
-const config = await readConfig(CONFIGPATH);
 
-
-// LOG SETTINGS
-
-console.log("Study is started with these parameter settings")
-console.log(config)
-
-
-// INITIALIZE RUNS
-
-function generateRun(): Run {
-  const id = uuidv4()
-  const checkValue = uuidv4()
-  const run: Run = {
-    id: id,
-    model: "not initialized",
-    updatedBy: [],
-    checkValue: checkValue
-  }
-
-  return run
-}
-
-const runs: Run[] = []
-
-for (let i = 0; i < config.study.nruns; i++) {
-    runs.push(generateRun())
-}
+// initialize helpers
 
 export function getAllParameterRunIds(): string[] {
  return runs.map(item => item["id"]);
@@ -89,3 +88,4 @@ export async function initializeRuns(store: ObjectStore): Promise<void> {
   }
   console.log("[initialize] initialize runs")
 }
+
