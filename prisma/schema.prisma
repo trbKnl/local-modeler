@@ -1,0 +1,43 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+model Study {
+  id            String    @id @unique
+  description   String?
+  runs          Run[]
+}
+
+model Run {
+  id              String      @id @default(uuid())
+  model           String
+  checkValue      String   @default(uuid())
+  study           Study    @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  studyId         String
+  updates         Update[] 
+}
+
+model Participant {
+  id              String      @id @unique
+  updates         Update[] 
+}
+
+model Update {
+  id              Int         @id @default(autoincrement())
+  run             Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId           String
+  participant     Participant @relation(fields: [participantId], references: [id])
+  participantId   String
+  createdAt       DateTime    @default(now())
+
+  @@unique([participantId, runId])
+}

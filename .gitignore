@@ -185,3 +185,6 @@ dmypy.json
 cython_debug/
 
 notes.txt
+
+# Ignore database files
+*.db

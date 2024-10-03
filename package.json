@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@msgpack/msgpack": "^3.0.0-beta2",
+    "@prisma/client": "^5.20.0",
     "@visx/responsive": "^3.10.2",
     "@visx/text": "^3.3.0",
     "@visx/wordcloud": "^3.3.0",
@@ -42,6 +43,7 @@
     "autoprefixer": "^10.4.19",
     "nodemon": "^3.0.1",
     "postcss": "^8.4.38",
+    "prisma": "^5.20.0",
     "tailwindcss": "^3.4.4",
     "vite": "^5.0.2"
   }
