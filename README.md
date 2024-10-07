@@ -31,25 +31,12 @@ This repository contains a proof of concept and is notably built with:
 
 ## Installation
 
-```bash
-git clone https://github.com/trbknl/local-modeler.git
-cd local-modeler
-npm i
 ```
-
-Make sure you have [Poetry](https://python-poetry.org/) installed.
-
-Make sure you have a Redis database running, for example with Docker:
-
-```bash
-docker run --rm -p 0.0.0.0:6379:6379 redis:7
-```
-
-Start development server with 
-
-```
-npm run dev
+npx prisma generate --generator client_node
+npx prisma@5.17.0 generate --generator client_python
 ```
 
 ## Usage
+
+
 

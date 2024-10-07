@@ -5,20 +5,21 @@ import ViteExpress from "vite-express";
 import { MutexManager } from "./mutexManager"
 import { validateQuery } from "./helpers"
 import * as database from "./database"
-import type { QueryParameters } from "./types"
 import { sleep } from "./helpers"
-
+import { 
+  QueryParameters,
+  ClientRun, 
+  ClientRunSchema,
+} from "./types"
 
 
 // INITIALIZE STUDY
 
 const mutexManager = new MutexManager()
+await database.initialize()
 
 const app = express();
 app.use(express.json());
-
-
-await database.initialize()
 
 
 app.get('/api', validateQuery, async (req: Request, res: Response) => {
@@ -28,10 +29,10 @@ app.get('/api', validateQuery, async (req: Request, res: Response) => {
   await database.upsertParticipant(participantId)
   const uncompletedRunIds = await database.getUncompletedRuns(studyId, participantId)
 
-  let clientRun
+  let clientRun: ClientRun | undefined = undefined
   const maxAttempts = 3
-  attempts: for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    for (const runId of uncompletedRunIds) {
+  tryRuns: for (const runId of uncompletedRunIds) {
+     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const isRunLocked = await mutexManager.isLocked(runId)
       if (!isRunLocked) {
 
@@ -43,11 +44,11 @@ app.get('/api', validateQuery, async (req: Request, res: Response) => {
         const model = await database.getRunModel(runId)
 
         clientRun = { 
-          id: runId, 
+          id: runId,
           checkValue: newCheckValue,
-          model: model
+          model: model,
         }
-        break attempts
+        break tryRuns
       }
     }
     await sleep(1000)
@@ -63,56 +64,33 @@ app.get('/api', validateQuery, async (req: Request, res: Response) => {
 
 
 
-//app.post('/api', validateQuery, async (req: Request, res: Response) => {
-//  const params: QueryParameters  = req.query as any
-//  const { participantId, studyId } = params
-//  const { runId, checkValue, model} = req.body
-//  // TODO: add validation
-//  // return res.status(400).send(`Data not in the correct format: ${result.error}`)
-//  console.log(`[Post Api] received ${JSON.stringify(req.body)} from ${participantId}`)
-//  const oldCheckValue = await database.getRunCheckValue(runId)
-//  const oldCheckValue = await database.isRunUpdatedByParticipant(runId, participantId)
-//
-//
-//  // update database
-//  // await postClientRun(mutexManager, store, studyId, participantId, result.data)
-//  return res.status(200).send("Success")
-//});
+app.post('/api', validateQuery, async (req: Request, res: Response) => {
+  const params: QueryParameters  = req.query as any
+  const { participantId } = params
 
+  // validate input
+  const result = ClientRunSchema.safeParse(req.body)
+  if (!result.success) {
+    return res.status(400).send(`Request body not in the correct format: ${result.error}`)
+  }
+  const { id, checkValue, model } = result.data
 
+  const checkValuesMatch = (await database.getRunCheckValue(id)) === checkValue
+  const isNotAlreadyUpdated = !(await database.isRunUpdatedByParticipant(id, participantId))
+  if (
+    checkValuesMatch &&
+    isNotAlreadyUpdated
+  ) {
+    await database.updateRunModel(id, model)
+    await database.createUpdate(id, participantId) // add entry in update table
+    await mutexManager.release(id)
+    console.log(`[Post Api] Success, participant: ${participantId} updatet run: ${id}`)
 
-//export async function postClientRun(
-//  mutexManager: MutexManager,
-//  store: ObjectStore,
-//  studyId: string, 
-//  participantId: string, 
-//  clientRunResults: ClientRun
-//): Promise<void> {
-//  const runId = clientRunResults.id
-//  const tracker = await loadParticipantTracker(store, studyId, participantId)
-//  const run = await loadRun(store, runId)
-//
-//  // if update succesfull update trackers and runs on the server and release the lock
-//  if (
-//    run.checkValue === clientRunResults.checkValue &&
-//    !run.updatedBy.includes(participantId)
-//  ) {
-//    run.model = clientRunResults.model
-//    run.updatedBy.push(participantId)
-//    tracker.hasUpdatedRunIds.push(runId)
-//
-//    await saveRun(store, runId, run)
-//    await saveParticipantTracker(store, studyId, participantId, tracker)
-//    await mutexManager.release(runId)
-//
-//    console.log(`[Post Api] update successfull ${runId} from ${participantId}`)
-//    await writeObjectToJsonFile(`${PROJECTROOT}/study-results/${studyId}-${runId}.json`, run)
-//  } else {
-//    console.log(`[Post Api] update rejected, studyId ${studyId}: runId: ${runId}, participantId: ${participantId}`)
-//  }
-//}
-
-
+    return res.status(200).send("Success")
+  } else {
+    return res.status(200).send("Not updated")
+  }
+})
 
 
 // START SERVER
@@ -127,4 +105,3 @@ ViteExpress.bind(app, server, async () => {
     console.log(`Server is ready at port ${port}`)
   })
 });
-

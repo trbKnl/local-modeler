@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+// Query parameters
+
+export const ClientRunSchema = z.object({
+  id: z.string().uuid(),
+  checkValue: z.string().uuid(),
+  model: z.string(),
+});
+
+export type ClientRun = z.infer<typeof ClientRunSchema>
+
 
 // Query parameters
 

@@ -182,3 +182,18 @@ alpha = np.ones(num_topics) * 0.1  # Symmetric Dirichlet prior for theta
 beta = np.ones(vocab_size) * 0.01  # Symmetric Dirichlet prior for phi
 
 docs, theta, phi = generate_lda_test_data(num_docs, num_topics, num_words, alpha, beta)
+
+#####################################################
+
+import os
+os.environ["DATABASE_URL"] = "file:../prisma/dev.db"
+from prisma import Prisma
+
+
+prisma = Prisma()
+prisma.connect()
+
+participants = prisma.participant.find_many()
+participants
+
+
