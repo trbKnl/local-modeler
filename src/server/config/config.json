@@ -1,7 +1,5 @@
 {
-  "study": {
-    "nruns": 10
-  },
-  "nstudies": 1
+  "id": "test",
+  "nRuns": 10
 }
 

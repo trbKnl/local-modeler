@@ -1,21 +1,21 @@
 import { prisma } from "../../prisma/client"
 import { v4 as uuidv4 } from "uuid"
+import { readConfig } from "./helpers"
 
-const STUDYID = "test" 
 
-async function createStudyData() {
+async function createStudyData(studyId: string, nRuns: number): Promise<void> {
   await prisma.study.create({
     data: {
-      id: STUDYID,
+      id: studyId,
     },
   })
 
-  // Create runs for the study
+  // Initialize study with runs
   await Promise.all(
-    Array.from({ length: 3 }, (_, i) =>
+    Array.from({ length: nRuns }, () =>
       prisma.run.create({
         data : {
-          studyId: STUDYID,
+          studyId: studyId,
           model: "not initialized",
           checkValue: uuidv4(),
         }
@@ -26,14 +26,15 @@ async function createStudyData() {
 
 
 export async function initialize() {
+  const config = await readConfig()
   const studyExists = await prisma.study.findUnique({
     where: {
-      id: STUDYID,
+      id: config.id,
     },
   });
 
   if (!studyExists) {
-    await createStudyData()
+    await createStudyData(config.id, config.nRuns)
   }
 }
 

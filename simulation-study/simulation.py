@@ -196,4 +196,10 @@ prisma.connect()
 participants = prisma.participant.find_many()
 participants
 
+studies = prisma.study.find_many(
+    include= {
+        "runs": True,
+    }
+)
+studies
 
