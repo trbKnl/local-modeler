@@ -1,13 +1,9 @@
-from collections import Counter
-import itertools
 import json
+import httpx
 
 import numpy as np
-import httpx
-from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
-from sklearn.feature_extraction import text
 
 
 ###################################################################################
@@ -86,13 +82,13 @@ def load_lda_model(serialized_model: str) -> LatentDirichletAllocation:
     return lda
 
 
-def learn_params(data, model: str) -> str:
+def learn_params(data, vocabulary, model: str) -> str:
     # TODO: check conditions of data
 
     lda = load_lda_model(model)
 
     #predefined_vocab = {'this': 0, 'is': 1, 'first': 2, 'third': 3, 'second': 4, 'batch': 5, 'asd': 6}
-    #vectorizer = CountVectorizer(vocabulary=predefined_vocab)
+    vectorizer = CountVectorizer(vocabulary=vocabulary)
 
     # data should be list of a list of strings
     batch_term_matrix = vectorizer.fit_transform(data)
@@ -164,7 +160,7 @@ def generate_lda_test_data(ndocs, ntopics, nwords, alpha, beta):
             if count > 0:
                 words = multinomial.rvs(n=count, p=phi[k])
                 for word, word_count in enumerate(words):
-                    doc.extend([word] * word_count)
+                    doc.extend([str(word)] * word_count)
         
         np.random.shuffle(doc)  # Shuffle to mix words from different topics
         documents.append(doc)
@@ -183,23 +179,73 @@ beta = np.ones(vocab_size) * 0.01  # Symmetric Dirichlet prior for phi
 
 docs, theta, phi = generate_lda_test_data(num_docs, num_topics, num_words, alpha, beta)
 
+
+
 #####################################################
 
 import os
-os.environ["DATABASE_URL"] = "file:../prisma/dev.db"
+import uuid
+import httpx
 from prisma import Prisma
+import json
 
-
+# Initialize Prisma
+os.environ["DATABASE_URL"] = "file:../prisma/dev.db"
 prisma = Prisma()
 prisma.connect()
 
-participants = prisma.participant.find_many()
-participants
 
-studies = prisma.study.find_many(
-    include= {
-        "runs": True,
-    }
-)
-studies
+
+def create_study_data(study_id: str, n_runs: int):
+
+    # Create a new study record
+    prisma.study.create(
+        data={
+            'id': study_id
+        }
+    )
+
+    # Initialize study with runs
+    for _ in range(n_runs):
+        prisma.run.create(
+            data={
+                'studyId': study_id,
+                'model': 'not initialized',
+                'checkValue': str(uuid.uuid4())
+            }
+        )
+
+nruns = 10
+study_id = "test_2"
+
+# Add study entries to database
+create_study_data(study_id, nruns)
+
+# generate some test data
+docs, theta, phi = generate_lda_test_data(num_docs, num_topics, num_words, alpha, beta)
+vocabulary = {f"{i}": i-1 for i in range(1, 1001)}
+
+
+
+# ask api for a model and train model and send data back
+LOCAL_MODELER_URL = "http://localhost:3000/api"
+HEADERS = { "Content-Type": "application/json" }
+
+
+
+participant_id = 123
+params = { "studyId": study_id, "participantId": participant_id }
+
+# Allright no runs are available
+for i in range(nruns):
+    response = httpx.get(LOCAL_MODELER_URL, params=params)
+    run = json.loads(response.text)
+    data = [" ".join(doc) for doc in docs]
+
+    new_model = learn_params(data, vocabulary, run["model"])
+    run["model"] = new_model
+
+    response = httpx.post(LOCAL_MODELER_URL, headers=HEADERS, params=params, json=run)
+    print("===")
+    print(response.text)
 
