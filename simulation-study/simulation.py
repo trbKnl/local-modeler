@@ -103,6 +103,7 @@ def learn_params(data, vocabulary, model: str) -> str:
 import numpy as np
 from scipy.stats import dirichlet, multinomial
 
+
 def generate_lda_test_data(ndocs, ntopics, nwords, alpha, beta):
     """
     Parameters:
@@ -146,7 +147,10 @@ def generate_lda_test_data(ndocs, ntopics, nwords, alpha, beta):
     theta = []
     
     phi = dirichlet.rvs(beta, size=K)    # ndarray K by N 
+    phi = phi / phi.sum(axis=1, keepdims=True) # normalize
+
     theta = dirichlet.rvs(alpha, size=M) # ndarray M by K
+    theta = theta / theta.sum(axis=1, keepdims=True) # normalize
 
     for theta_i in theta:
         # Assign each word in a doc to a topic 
@@ -167,7 +171,6 @@ def generate_lda_test_data(ndocs, ntopics, nwords, alpha, beta):
     
     return documents, theta, phi
 
-
 # Generate some data
 
 num_docs = 100
@@ -180,14 +183,15 @@ beta = np.ones(vocab_size) * 0.01  # Symmetric Dirichlet prior for phi
 docs, theta, phi = generate_lda_test_data(num_docs, num_topics, num_words, alpha, beta)
 
 
-
 #####################################################
 
 import os
 import uuid
 import httpx
 from prisma import Prisma
+import itertools
 import json
+import random
 
 # Initialize Prisma
 os.environ["DATABASE_URL"] = "file:../prisma/dev.db"
@@ -196,16 +200,13 @@ prisma.connect()
 
 
 
-def create_study_data(study_id: str, n_runs: int):
-
-    # Create a new study record
+def create_new_study(study_id: str, description: str, n_runs: int):
     prisma.study.create(
         data={
-            'id': study_id
+            "id": study_id,
+            "description": description,
         }
     )
-
-    # Initialize study with runs
     for _ in range(n_runs):
         prisma.run.create(
             data={
@@ -215,37 +216,138 @@ def create_study_data(study_id: str, n_runs: int):
             }
         )
 
-nruns = 10
-study_id = "test_2"
 
-# Add study entries to database
-create_study_data(study_id, nruns)
-
-# generate some test data
-docs, theta, phi = generate_lda_test_data(num_docs, num_topics, num_words, alpha, beta)
-vocabulary = {f"{i}": i-1 for i in range(1, 1001)}
+def delete_study(study_id: str):
+    prisma.study.delete(
+        where={
+            'id': study_id
+        }
+    )
 
 
+def initialize_study(study_id: str, description: str, n_runs: int, delete: bool = True):
+    study = prisma.study.find_unique(
+        where={
+            'id': study_id
+            }
+    )
 
-# ask api for a model and train model and send data back
+    if study:
+        print(f"Study with ID {study_id} exists")
+        if delete == True:
+            prisma.study.delete(
+                where={
+                    'id': study_id
+                }
+            )
+            print(f"Study with ID {study_id} has been deleted.")
+            print(f"Creating new")
+            create_new_study(study_id, description, n_runs)
+
+    else:
+        print(f"Study with ID {study_id} does not exist. creating new")
+        create_new_study(study_id, description, n_runs)
+
+
+
+# study combinations
+
+
+def initialize_condition(condition):
+    n_words, n_topics, n_participants = condition
+
+    # change later to create different entropy R^2 conditions
+    vocab_size = 1000                  
+    alpha = np.ones(n_topics) * 0.1   # Symmetric Dirichlet prior for theta
+    beta = np.ones(vocab_size) * 0.01  # Symmetric Dirichlet prior for phi
+    vocabulary = {f"{i}": i-1 for i in range(1, 1001)}
+    replications = 10
+
+    out = []
+    for i in range(replications):
+
+        study_id = f"{n_words}_{n_topics}_{n_participants}_{i}"
+        seed = abs(hash(study_id)) % (2**32)
+        random.seed(seed)
+
+        docs, theta, phi = generate_lda_test_data(n_participants, n_topics, n_words, alpha, beta)
+
+        study_settings = {
+            "study_id": study_id,
+            "n_words": n_words,
+            "n_topics": n_topics,
+            "n_participants": n_participants,
+            "vocab_size": vocab_size,
+            "replications": replications,
+            "alpha": alpha.tolist(),
+            "beta": beta.tolist(),
+            "n_replications": replications,
+            "replication": i,
+            "seed": seed,
+            "docs": docs,
+            "theta": theta.tolist(),
+            "phi": phi.tolist(),
+            "vocabulary": vocabulary,
+        }
+
+        description = json.dumps(study_settings)
+        initialize_study(study_id, description=description, n_runs=1)
+
+        out.append(study_settings)
+
+    return out
+
+
+###############################################################
+# Start simulation study of condition
+
 LOCAL_MODELER_URL = "http://localhost:3000/api"
 HEADERS = { "Content-Type": "application/json" }
 
+# all study combination
+
+n_words = [50, 100]
+n_topics = [5, 10]
+n_participants = [50, 100, 200]
+combinations = list(itertools.product(n_words, n_topics, n_participants))
 
 
-participant_id = 123
-params = { "studyId": study_id, "participantId": participant_id }
+# run simulation
 
-# Allright no runs are available
-for i in range(nruns):
-    response = httpx.get(LOCAL_MODELER_URL, params=params)
-    run = json.loads(response.text)
-    data = [" ".join(doc) for doc in docs]
+for combination in combinations:
+    condition = initialize_condition(combination)
+    n_replications = len(condition)
 
-    new_model = learn_params(data, vocabulary, run["model"])
-    run["model"] = new_model
+    for i in range(n_replications):
+        replication_settings = condition[i]
 
-    response = httpx.post(LOCAL_MODELER_URL, headers=HEADERS, params=params, json=run)
-    print("===")
-    print(response.text)
+        study_id = replication_settings["study_id"]
+        n_participants = replication_settings["n_participants"]
+        vocabulary = replication_settings["vocabulary"]
+        docs = replication_settings["docs"]
+        seed = replication_settings["seed"]
+
+        # set the unique seed for each replication
+        random.seed(seed)
+
+        for n in range(n_participants):
+            # get model
+            params = { "studyId": study_id, "participantId": f"{n}" }
+            response = httpx.get(LOCAL_MODELER_URL, params=params)
+
+            # check if already ran
+            if response.text == "No runs are available":
+                break
+
+            run = json.loads(response.text)
+
+            # train model
+            data = docs[n]
+            new_model = learn_params(data, vocabulary, run["model"])
+            run["model"] = new_model
+
+            # post newly trained model
+            response = httpx.post(LOCAL_MODELER_URL, headers=HEADERS, params=params, json=run)
+            print(response.text)
+
 
