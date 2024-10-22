@@ -54,9 +54,9 @@ def save_lda_model(lda: LatentDirichletAllocation) -> str:
     return json.dumps(model)
 
 
-def load_lda_model(serialized_model: str) -> LatentDirichletAllocation:
+def load_lda_model(serialized_model: str, n_components: int) -> LatentDirichletAllocation:
     if serialized_model == "not initialized":
-        lda = LatentDirichletAllocation(n_components=3, learning_method='online', max_iter=1)
+        lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', max_iter=1)
         return lda
 
     model: dict = json.loads(serialized_model)
@@ -82,10 +82,10 @@ def load_lda_model(serialized_model: str) -> LatentDirichletAllocation:
     return lda
 
 
-def learn_params(data, vocabulary, model: str) -> str:
+def learn_params(data, vocabulary, model: str, n_components) -> str:
     # TODO: check conditions of data
 
-    lda = load_lda_model(model)
+    lda = load_lda_model(model, n_components)
 
     #predefined_vocab = {'this': 0, 'is': 1, 'first': 2, 'third': 3, 'second': 4, 'batch': 5, 'asd': 6}
     vectorizer = CountVectorizer(vocabulary=vocabulary)
@@ -324,6 +324,7 @@ for combination in combinations:
         study_id = replication_settings["study_id"]
         n_participants = replication_settings["n_participants"]
         vocabulary = replication_settings["vocabulary"]
+        n_topics = replication_settings["n_topics"]
         docs = replication_settings["docs"]
         seed = replication_settings["seed"]
 
@@ -343,11 +344,51 @@ for combination in combinations:
 
             # train model
             data = docs[n]
-            new_model = learn_params(data, vocabulary, run["model"])
+            new_model = learn_params(data, vocabulary, run["model"], n_topics)
             run["model"] = new_model
 
             # post newly trained model
             response = httpx.post(LOCAL_MODELER_URL, headers=HEADERS, params=params, json=run)
             print(response.text)
+
+
+
+
+# GOOD CONDITION
+condition = initialize_condition((100, 5, 1000))
+n_replications = len(condition)
+
+for i in range(n_replications):
+    replication_settings = condition[i]
+
+    study_id = replication_settings["study_id"]
+    n_participants = replication_settings["n_participants"]
+    vocabulary = replication_settings["vocabulary"]
+    n_topics = replication_settings["n_topics"]
+    docs = replication_settings["docs"]
+    seed = replication_settings["seed"]
+
+    # set the unique seed for each replication
+    random.seed(seed)
+
+    for n in range(n_participants):
+        # get model
+        params = { "studyId": study_id, "participantId": f"{n}" }
+        response = httpx.get(LOCAL_MODELER_URL, params=params)
+
+        # check if already ran
+        if response.text == "No runs are available":
+            break
+
+        run = json.loads(response.text)
+
+        # train model
+        data = docs[n]
+        new_model = learn_params(data, vocabulary, run["model"], n_topics)
+        run["model"] = new_model
+
+        # post newly trained model
+        response = httpx.post(LOCAL_MODELER_URL, headers=HEADERS, params=params, json=run)
+        print(response.text)
 
 
