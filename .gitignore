@@ -188,3 +188,5 @@ notes.txt
 
 # Ignore database files
 *.db
+
+results.csv

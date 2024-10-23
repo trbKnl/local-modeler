@@ -1,107 +1,9 @@
-import json
-import httpx
-
-import numpy as np
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-
-
-###################################################################################
-# LDA related functions
-
-
-def serialize_random_state(rs: np.random.RandomState) -> str:
-    """
-    Serializes np.random.RandomState to a json string
-    """
-    state = rs.get_state()
-    # tolist if item is ndarray
-    serializable_state = [item.tolist() if isinstance(item, np.ndarray) else item for item in state]
-    return json.dumps(serializable_state)
-
-
-def deserialize_random_state(serialized_state: str) -> np.random.RandomState:
-    """
-    Deserializes a json string containing a random state and returns np.random.RandomState object
-    """
-    deserialized_state = tuple(
-        np.array(item, dtype=np.uint32) if isinstance(item, list) 
-        else item 
-        for item in json.loads(serialized_state)
-    )
-    rs = np.random.RandomState()
-    rs.set_state(deserialized_state) #pyright: ignore
-    return rs
-
-
-def save_lda_model(lda: LatentDirichletAllocation) -> str:
-    model_params = {
-        'components_': lda.components_.tolist(),
-        'exp_dirichlet_component_': lda.exp_dirichlet_component_.tolist(),
-        'doc_topic_prior_': lda.doc_topic_prior_,
-        'n_components': lda.n_components,
-        'learning_decay': lda.learning_decay,
-        'learning_offset': lda.learning_offset,
-        'max_iter': lda.max_iter,
-        'random_state': lda.random_state,
-        'n_batch_iter_': lda.n_batch_iter_,
-        'topic_word_prior_': lda.topic_word_prior_,
-    }
-    model = {
-        "model_params": model_params,
-        "random_state": serialize_random_state(lda.random_state_)
-    }
-    return json.dumps(model)
-
-
-def load_lda_model(serialized_model: str, n_components: int) -> LatentDirichletAllocation:
-    if serialized_model == "not initialized":
-        lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', max_iter=1)
-        return lda
-
-    model: dict = json.loads(serialized_model)
-    model_params = model['model_params']
-    random_state = model['random_state']
-    
-    lda = LatentDirichletAllocation(
-        learning_method='online',
-        n_components=model_params['n_components'],
-        learning_decay=model_params['learning_decay'],
-        learning_offset=model_params['learning_offset'],
-        max_iter=model_params['max_iter'],
-        random_state=model_params['random_state']
-    )
-
-    lda.components_ = np.array(model_params['components_'])
-    lda.exp_dirichlet_component_ = np.array(model_params['exp_dirichlet_component_'])
-    lda.doc_topic_prior_ = model_params['doc_topic_prior_']
-    lda.n_batch_iter_ = model_params['n_batch_iter_'] 
-    lda.topic_word_prior_ = model_params['topic_word_prior_'] 
-
-    lda.random_state_ = deserialize_random_state(random_state)
-    return lda
-
-
-def learn_params(data, vocabulary, model: str, n_components) -> str:
-    # TODO: check conditions of data
-
-    lda = load_lda_model(model, n_components)
-
-    #predefined_vocab = {'this': 0, 'is': 1, 'first': 2, 'third': 3, 'second': 4, 'batch': 5, 'asd': 6}
-    vectorizer = CountVectorizer(vocabulary=vocabulary)
-
-    # data should be list of a list of strings
-    batch_term_matrix = vectorizer.fit_transform(data)
-    lda.partial_fit(batch_term_matrix)
-    new_model = save_lda_model(lda)
-
-    return new_model
-
-
 #################################################################
+# Generate test data
 
 import numpy as np
 from scipy.stats import dirichlet, multinomial
+import lda
 
 
 def generate_lda_test_data(ndocs, ntopics, nwords, alpha, beta):
@@ -169,21 +71,13 @@ def generate_lda_test_data(ndocs, ntopics, nwords, alpha, beta):
         np.random.shuffle(doc)  # Shuffle to mix words from different topics
         documents.append(doc)
     
+    documents = [" ".join(map(str, d)) for d in documents]
     return documents, theta, phi
 
-# Generate some data
-
-num_docs = 100
-num_topics = 5
-num_words = 50
-vocab_size = 1000
-alpha = np.ones(num_topics) * 0.1  # Symmetric Dirichlet prior for theta
-beta = np.ones(vocab_size) * 0.01  # Symmetric Dirichlet prior for phi
-
-docs, theta, phi = generate_lda_test_data(num_docs, num_topics, num_words, alpha, beta)
 
 
 #####################################################
+# Run simulation
 
 import os
 import uuid
@@ -249,18 +143,16 @@ def initialize_study(study_id: str, description: str, n_runs: int, delete: bool 
         create_new_study(study_id, description, n_runs)
 
 
-
 # study combinations
-
 
 def initialize_condition(condition):
     n_words, n_topics, n_participants = condition
 
-    # change later to create different entropy R^2 conditions
-    vocab_size = 1000                  
-    alpha = np.ones(n_topics) * 0.1   # Symmetric Dirichlet prior for theta
-    beta = np.ones(vocab_size) * 0.01  # Symmetric Dirichlet prior for phi
-    vocabulary = {f"{i}": i-1 for i in range(1, 1001)}
+    # NOTE: maybe change later to create different entropy R^2 conditions
+    vocab_size = 500                  
+    alpha = np.ones(n_topics) * 0.1   # Sparse document-topic distribution
+    beta = np.ones(vocab_size) * 0.1   # Very sparse topic-word distribution
+    vocabulary = {str(i): i for i in range(0, vocab_size)}
     replications = 10
 
     out = []
@@ -298,7 +190,7 @@ def initialize_condition(condition):
     return out
 
 
-###############################################################
+
 # Start simulation study of condition
 
 LOCAL_MODELER_URL = "http://localhost:3000/api"
@@ -308,7 +200,7 @@ HEADERS = { "Content-Type": "application/json" }
 
 n_words = [50, 100]
 n_topics = [5, 10]
-n_participants = [50, 100, 200]
+n_participants = [50, 200, 500]
 combinations = list(itertools.product(n_words, n_topics, n_participants))
 
 
@@ -344,7 +236,7 @@ for combination in combinations:
 
             # train model
             data = docs[n]
-            new_model = learn_params(data, vocabulary, run["model"], n_topics)
+            new_model = lda.learn_params([data], vocabulary, run["model"], n_topics)
             run["model"] = new_model
 
             # post newly trained model
@@ -354,41 +246,61 @@ for combination in combinations:
 
 
 
-# GOOD CONDITION
-condition = initialize_condition((100, 5, 1000))
-n_replications = len(condition)
+###################################################################################3333
+# Playground 
+#
+# Keep your generate_lda_test_data function as is
+# PURE ONLINE
 
-for i in range(n_replications):
-    replication_settings = condition[i]
+import metrics
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
 
-    study_id = replication_settings["study_id"]
-    n_participants = replication_settings["n_participants"]
-    vocabulary = replication_settings["vocabulary"]
-    n_topics = replication_settings["n_topics"]
-    docs = replication_settings["docs"]
-    seed = replication_settings["seed"]
+# observation
+# alpha and beta matter a great deal
+# max_itr batchvs online not so much
+# also vocab size probably has to do with enthropy
 
-    # set the unique seed for each replication
-    random.seed(seed)
+# These settings give good results
+num_docs = 1000      # More documents for better estimation
+num_topics = 5       # Keep small for clearer separation
+num_words = 100      # More words per doc for better topic signals
+vocab_size = 200      # Small vocabulary makes topics more distinct
+alpha = np.ones(num_topics) * 0.1   # Sparse document-topic distribution
+beta = np.ones(vocab_size) * 0.1   # Very sparse topic-word distribution
 
-    for n in range(n_participants):
-        # get model
-        params = { "studyId": study_id, "participantId": f"{n}" }
-        response = httpx.get(LOCAL_MODELER_URL, params=params)
+# Generate data
+docs, theta, phi = generate_lda_test_data(num_docs, num_topics, num_words, alpha, beta)
 
-        # check if already ran
-        if response.text == "No runs are available":
-            break
+# Convert to text format
+vocabulary = {str(i): i for i in range(0, vocab_size)}
 
-        run = json.loads(response.text)
+# Vectorize
+vectorizer = CountVectorizer(vocabulary=vocabulary)
 
-        # train model
-        data = docs[n]
-        new_model = learn_params(data, vocabulary, run["model"], n_topics)
-        run["model"] = new_model
+# Initialize and fit LDA
+lda_model = LatentDirichletAllocation(
+    n_components=num_topics,
+    random_state=42,
+    learning_method='online',
+)
 
-        # post newly trained model
-        response = httpx.post(LOCAL_MODELER_URL, headers=HEADERS, params=params, json=run)
-        print(response.text)
+
+for doc in docs:
+    doc_term_matrix = vectorizer.fit_transform([doc])
+    lda_model.partial_fit(doc_term_matrix)
+
+
+doc_term_matrix = vectorizer.transform(docs)
+theta_hat = lda_model.transform(doc_term_matrix)
+phi_hat = lda_model.components_
+
+print("Average KL divergence phi:", metrics.average_kl_divergence(phi))
+print("Average KL divergence theta:", metrics.average_kl_divergence(theta))
+
+print("Average max cosine similarity:", metrics.average_max_cosine_similarity(phi, phi_hat))
+print("Average min KL divergence:", metrics.average_min_kl_divergence(phi, phi_hat))
+print("Adjusted rand score:", metrics.adjusted_rand_score(theta, theta_hat))
+
 
 
