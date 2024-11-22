@@ -1,4 +1,4 @@
-defmodule MyMutex.Studies do
+defmodule Local.Studies do
   @moduledoc """
   The Studies context for local modeler
   This module handles all study-related business logic and database operations.

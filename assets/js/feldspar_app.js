@@ -9,11 +9,11 @@ export const FeldsparApp = {
     });
     iframe.setAttribute("src", this.el.dataset.src);
     
-    window.addEventListener("phx:print", function(event) {
-      const message = event.detail.message
-      const action = "print"
-      console.log(`PRINT: ${message}`)
-      iframe.contentWindow.postMessage({ action, message })
+    // send Phoenix event to Port
+    window.addEventListener("phx:to_feldspar_event", function(event) {
+      const action = event.detail.action
+      const data = event.detail.data
+      iframe.contentWindow.postMessage({ action, data })
     })
 
     window.addEventListener("message", function(event) {
@@ -43,7 +43,6 @@ export const FeldsparApp = {
     iframe.contentWindow.postMessage({ action, locale }, "*", [
       this.channel.port2,
     ]);
-
   },
 
   handleMessage(e) {
