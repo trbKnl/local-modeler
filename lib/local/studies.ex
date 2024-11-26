@@ -119,8 +119,7 @@ end
 
 # Playground testing code
 
-#MyMutex.Studies.initialize_study("qwe872378", 10)
-
+#Local.Studies.initialize_study("test", 10)
 
 #MyMutex.Repo.delete_all(MyMutex.Study)
 #MyMutex.Repo.all(MyMutex.Run)
@@ -162,3 +161,7 @@ end
 # cascading works
 #MyMutex.Studies.delete_study("test study2")
 #MyMutex.Studies.delete_study("test study")
+
+#Local.Repo.all(Local.Schema.Run)
+
+

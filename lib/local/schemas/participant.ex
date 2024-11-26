@@ -4,7 +4,7 @@ defmodule Local.Schema.Participant do
 
   @primary_key {:id, :string, autogenerate: false}
   schema "participants" do
-    has_many :updates, MyMutex.Update
+    has_many :updates, Local.Schema.Update
   end
 
   def changeset(participant, params) do

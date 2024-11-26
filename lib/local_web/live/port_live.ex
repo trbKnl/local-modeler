@@ -1,15 +1,17 @@
 defmodule LocalWeb.PortPage do
   use LocalWeb, :live_view
+  alias Local.Schema.Run
 
   @impl true
-  def mount(_params, _session, socket) do
-    socket = assign(socket, 
-      url: "http://localhost:4000/uploads/port/build/index.html"
-    )
+  def mount(params, _session, socket) do
+      socket = 
+        socket
+        |> assign(:url, "http://localhost:4000/uploads/port/build/index.html")
+        |> assign(:query_params, params)
+
     {:ok, socket}
   end
 
-  # FROM PORT TO PHOENIX
 
   @impl true
   def handle_event(
@@ -23,16 +25,37 @@ defmodule LocalWeb.PortPage do
 
   @impl true
   def handle_event(
-    "feldspar_event",
-    %{"__type__" => "CommandSystemGetParameters"}, 
-    socket
-  ) do
-    socket |> printer("Here is your model!! Good luck")
+        "feldspar_event",
+        %{"__type__" => "CommandSystemGetParameters"},
+        %{assigns: %{query_params: %{"studyId" => study_id, "participantId" => participant_id}}} = socket
+      ) do
+    run = LocalModeler.get(study_id, participant_id) |> Jason.encode!()
+
+    send_params(socket, run)
   end
 
   @impl true
   def handle_event(
-    "feldspar_event",
+        "feldspar_event",
+        %{
+          "__type__" => "CommandSystemPutParameters",
+          "check_value" => check_value,
+          "id" => run_id,
+          "model" => model,
+        } = params,
+        %{assigns: %{query_params: %{"studyId" => study_id, "participantId" => participant_id}}} = socket
+      ) do
+
+    %Run{id: run_id, model: model, check_value: check_value, study_id: study_id} 
+    |> LocalModeler.put(participant_id)
+
+    socket 
+    |> send_ack(params["__type__"])
+  end
+
+  @impl true
+  def handle_event(
+      "feldspar_event",
     params,
     socket
   ) do
@@ -40,17 +63,6 @@ defmodule LocalWeb.PortPage do
     {:noreply, socket}
   end
 
-  # FROM PHOENIX TO PORT
-
-  @impl true
-  def handle_event("send_params", _params, socket) do
-    socket |> printer("Good Luck with the params!!!")
-  end
-
-  @impl true
-  def handle_event("send_something_else", _params, socket) do
-    {:noreply, push_event(socket, "to_feldspar_event", %{action: "something undefined", data: "asd"})}
-  end
 
   @impl true
   def render(assigns) do
@@ -72,8 +84,12 @@ defmodule LocalWeb.PortPage do
   end
 
 
-  defp printer(socket, message) do
-    {:noreply, push_event(socket, "to_feldspar_event", %{action: "CommandSystemGetParameters", data: message})}
+  defp send_params(socket, run) do
+    {:noreply, push_event(socket, "to_feldspar_event", %{action: "CommandSystemGetParameters", data: run})}
+  end
+
+  defp send_ack(socket, action) do
+    {:noreply, push_event(socket, "to_feldspar_event", %{action: action, data: "ok"})}
   end
 end
 

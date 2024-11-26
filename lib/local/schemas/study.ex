@@ -5,7 +5,7 @@ defmodule Local.Schema.Study do
   @primary_key {:id, :string, autogenerate: false}
   schema "studies" do
     field :description, :string
-    has_many :runs, MyMutex.Run
+    has_many :runs, Local.Schema.Run
   end
 
   def changeset(study, params) do
@@ -14,7 +14,6 @@ defmodule Local.Schema.Study do
     |> validate_required([:id])
   end 
 end
-
 
 
 #study = %MyMutex.Study{}

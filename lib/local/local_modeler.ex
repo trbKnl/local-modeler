@@ -4,11 +4,12 @@ defmodule LocalModeler do
 
   @max_attemps 3
 
-
   # GET method
 
   # TODO: MAKE  CODE MORE READABLE
   # Make clear what happens with edge cases
+  # returns either the run or nil
+  # CHANGE LATER
   def get(study_id, participant_id) do
     Studies.upsert_participant(participant_id)
     Studies.get_uncompleted_runs(study_id, participant_id)
@@ -18,7 +19,7 @@ defmodule LocalModeler do
 
   # PUT method
 
-  def put(participant_id, %Run{} = updated_run) do
+  def put(%Run{} = updated_run, participant_id) do
     current_run = Studies.get_run(updated_run.id)
 
     # check conditions
@@ -34,7 +35,7 @@ defmodule LocalModeler do
 
     end
   end
-  def put(_, _) do IO.puts("Bork Bork") end
+  def put(_, _) do raise "Pattern matching put parameters failed" end
 
   # Helpers
 
