@@ -2,19 +2,29 @@ defmodule LocalModeler do
   alias Local.Schema.Run
   alias Local.Studies
 
-  @max_attemps 3
-
   # GET method
 
-  # TODO: MAKE  CODE MORE READABLE
-  # Make clear what happens with edge cases
-  # returns either the run or nil
-  # CHANGE LATER
+  # TODO: 
+  # add logging
   def get(study_id, participant_id) do
     Studies.upsert_participant(participant_id)
-    Studies.get_uncompleted_runs(study_id, participant_id)
-    |> get_run_id_with_timeout(@max_attemps)
-    |> Studies.get_run()
+
+    result = Studies.get_uncompleted_runs(study_id, participant_id) 
+    |> RunTask.get_run_id()
+
+    case result do
+      {:ok, :done} ->
+        create_payload("PayloadError", "No runs left, participant is done")
+
+      {:ok, run_id} ->
+        create_payload("PayloadString", Studies.get_run(run_id) |> Jason.encode!())
+
+      {_, error} ->
+        create_payload("PayloadError", error)
+
+      _ ->
+        create_payload("PayloadError", "Could not return run")
+    end
   end
 
   # PUT method
@@ -39,26 +49,11 @@ defmodule LocalModeler do
 
   # Helpers
 
-  defp get_run_id(run_ids) do
-    Enum.find(run_ids, fn run_id ->
-      case MutexManager.lock(run_id) do
-        {:ok, run_id} -> 
-          run_id
-        {:error, :busy} -> 
-          false
-        end
-    end)
-  end
-
-  defp get_run_id_with_timeout([], _), do: nil
-  defp get_run_id_with_timeout(_, 0), do: nil
-  defp get_run_id_with_timeout(run_ids, attempts) do
-    case get_run_id(run_ids) do
-      nil ->
-        Process.sleep(1000)
-        get_run_id_with_timeout(run_ids, attempts - 1)
-      run_id -> run_id
-    end
+  def create_payload(payload, value) do
+  %{
+    "__type__" => payload,
+    "value" => value
+    }
   end
 
 end

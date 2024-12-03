@@ -1,87 +1,126 @@
+defmodule Mutex do
+  defstruct [locked: false, release_timer: nil]
+end
+
 defmodule MutexManager do
   @moduledoc """
   A GenServer-based module to manage simple mutex locks with expiration.
+  Mutexes expire after @timeout miliseconds
 
-  This module provides basic lock management functionality for keys with an expiration timeout.
+  Mutexes are stored in a map upon a release
+  RunTaskQueue is notified that a mutex freed up
   """
+
+  @timeout 3000
+  #@timeout 100_000
 
   use GenServer
 
-  # Lock expires in timeout ms
-  @timeout 3000
-
   # Client API
 
-  def start_link(_) do
+  def start_link() do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  def lock(key) do
-    GenServer.call(__MODULE__, {:lock, key})
+  def lock(id) do
+    GenServer.call(__MODULE__, {:lock, id})
   end
 
-  def is_locked(key) do
-    GenServer.call(__MODULE__, {:is_locked, key})
+  def is_locked(id) do
+    GenServer.call(__MODULE__, {:is_locked, id})
   end
 
-  def release(key) do
-    GenServer.cast(__MODULE__, {:release, key})
+  def release(id) do
+    GenServer.cast(__MODULE__, {:release, id})
   end
 
   # Server Callbacks
 
   @impl true
-  def init(mutexes) do
-    {:ok, mutexes}
+  def init(state) do
+    {:ok, state}
   end
 
   @impl true
-  def handle_call({:lock, key}, _from, mutexes) do
-    if is_locked?(mutexes, key) do
-      {:reply, {:error, :busy}, mutexes}
-    else
-      {:reply, {:ok, key}, lock(mutexes, key)}
+  def handle_call({:lock, id}, _from, state) do
+    if is_locked?(state, id) do
+      {:reply, {:error, :busy}, state}
+    else 
+      {:reply, {:ok, id}, state |> set_locked(id)}
     end
   end
 
   @impl true
-  def handle_call({:is_locked, key}, _from, mutexes) do
-    is_locked = is_locked?(mutexes, key)
-    {:reply, is_locked, mutexes}
+  def handle_call({:is_locked, id}, _from, state) do
+    {:reply, is_locked?(state, id), state}
   end
 
   @impl true
-  def handle_cast({:release, key}, mutexes) do
-    mutexes = release(mutexes, key)
-    {:noreply, mutexes}
+  def handle_cast({:release, id}, state) do
+    {:noreply, state |> set_release(id)}
+  end
+
+  @impl true
+  def handle_info({:release, id}, state) do
+    {:noreply, state |> set_release(id)}
   end
 
   # Private function
 
-  defp is_locked?(mutexes, key) do
-    case Map.get(mutexes, key) do
+  defp set_release(state, id) do
+    state
+    |> ensure_mutex_exists(id)
+    |> set_locked(id, false)
+    |> kill_release_timer(id)
+    |> then(fn state ->
+        RunTaskQueue.notify_mutex_unlocked(id)
+        state
+      end)
+  end
+
+  defp set_locked(state, id) do
+    state
+    |> ensure_mutex_exists(id)
+    |> set_locked(id, true)
+    |> set_release_timer(id)
+  end
+
+  defp is_locked?(state, id) do
+    case Map.get(state, id) do
       nil ->
         false
 
-      timestamp ->
-        !is_expired(timestamp)
+      %Mutex{} = mutex ->
+        mutex.locked
+      end
+  end
+
+  defp set_locked(state, id, bool) do
+    put_in(state[id].locked, bool)
+  end
+
+  defp set_release_timer(state, id) do
+    timer_ref = Process.send_after(self(), {:release, id}, @timeout)
+    put_in(state[id].release_timer, timer_ref)
+  end
+
+  defp kill_release_timer(state, id) do
+    case state[id].release_timer do
+      nil ->
+        state
+
+      timer_ref ->
+        Process.cancel_timer(timer_ref)
+        put_in(state[id].release_timer, nil)
     end
   end
 
-  defp lock(mutexes, key) do
-    if is_locked?(mutexes, key) do
-      mutexes
+  defp ensure_mutex_exists(state, id) do
+    if is_nil(Map.get(state, id)) do
+      Map.put(state, id, %Mutex{})
     else
-      Map.put(mutexes, key, DateTime.utc_now())
+      state
     end
-  end
-
-  defp release(mutexes, key) do
-    Map.delete(mutexes, key)
-  end
-
-  defp is_expired(timestamp) do
-    time_diff = DateTime.diff(DateTime.utc_now(), timestamp, :millisecond)
-    time_diff > @timeout
   end
 end
+

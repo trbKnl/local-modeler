@@ -15,6 +15,7 @@ defmodule Local.Application do
       # Start the Finch HTTP client for sending emails
       {Finch, name: Local.Finch},
       MutexManager,
+      RunTaskQueue,
 
       # Start a worker by calling: Local.Worker.start_link(arg)
       # {Local.Worker, arg},
