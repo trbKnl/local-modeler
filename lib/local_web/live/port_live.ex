@@ -26,12 +26,12 @@ defmodule LocalWeb.PortPage do
   @impl true
   def handle_event(
         "feldspar_event",
-        %{"__type__" => "CommandSystemGetParameters"},
+        %{"__type__" => "CommandSystemGetParameters"} = params,
         %{assigns: %{query_params: %{"studyId" => study_id, "participantId" => participant_id}}} = socket
       ) do
-    run = LocalModeler.get(study_id, participant_id) |> Jason.encode!()
+    run = LocalModeler.get(study_id, participant_id)
 
-    send_params(socket, run)
+    send_data(socket, params["__type__"], run)
   end
 
   @impl true
@@ -46,11 +46,10 @@ defmodule LocalWeb.PortPage do
         %{assigns: %{query_params: %{"studyId" => study_id, "participantId" => participant_id}}} = socket
       ) do
 
-    %Run{id: run_id, model: model, check_value: check_value, study_id: study_id} 
+    response = %Run{id: run_id, model: model, check_value: check_value, study_id: study_id} 
     |> LocalModeler.put(participant_id)
 
-    socket 
-    |> send_ack(params["__type__"])
+    send_data(socket, params["__type__"], response)
   end
 
   @impl true
@@ -84,12 +83,8 @@ defmodule LocalWeb.PortPage do
   end
 
 
-  defp send_params(socket, run) do
-    {:noreply, push_event(socket, "to_feldspar_event", %{action: "CommandSystemGetParameters", data: run})}
-  end
-
-  defp send_ack(socket, action) do
-    {:noreply, push_event(socket, "to_feldspar_event", %{action: action, data: "ok"})}
+  defp send_data(socket, action, data) do
+    {:noreply, push_event(socket, "to_feldspar_event", %{action: action, data: data})}
   end
 end
 

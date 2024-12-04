@@ -1,11 +1,11 @@
 defmodule LocalModeler do
+  require Logger
+
   alias Local.Schema.Run
   alias Local.Studies
 
   # GET method
 
-  # TODO: 
-  # add logging
   def get(study_id, participant_id) do
     Studies.upsert_participant(participant_id)
 
@@ -14,15 +14,19 @@ defmodule LocalModeler do
 
     case result do
       {:ok, :done} ->
+        Logger.info("[LocalModeler] Participant: #{participant_id} is done")
         create_payload("PayloadError", "No runs left, participant is done")
 
       {:ok, run_id} ->
-        create_payload("PayloadString", Studies.get_run(run_id) |> Jason.encode!())
+        Logger.info("[LocalModeler] Sending run id #{run_id} to #{participant_id}")
+        create_payload("[LocalModeler] PayloadString", Studies.get_run(run_id) |> Jason.encode!())
 
       {_, error} ->
+        Logger.info("[LocalModeler] Error: #{IO.inspect(error)}")
         create_payload("PayloadError", error)
 
       _ ->
+        Logger.info("[LocalModeler] unhandeld error")
         create_payload("PayloadError", "Could not return run")
     end
   end
@@ -43,6 +47,12 @@ defmodule LocalModeler do
       Studies.create_update(updated_run.id, participant_id)
       MutexManager.release(updated_run.id)
 
+      Logger.info("[LocalModeler] Run id #{current_run.id} updated")
+      create_payload("PayloadString", "run id was updated")
+    else
+      _ -> 
+        Logger.error("[LocalModeler] Conditions did not match in put")
+        create_payload("PayloadError", "Conditions did not meet, run was not updated")
     end
   end
   def put(_, _) do raise "Pattern matching put parameters failed" end
@@ -52,21 +62,9 @@ defmodule LocalModeler do
   def create_payload(payload, value) do
   %{
     "__type__" => payload,
-    "value" => value
+    "value" => value,
     }
   end
 
 end
-
-
-#participant_id = "p1"
-#
-#participant_id = "p2"
-#study_id = "asd"
-#
-#run = MyMutex.get(study_id, participant_id)
-#run = Map.put(run, :model, "yolo")
-#MyMutex.put(participant_id, run)
-#
-#MyMutex.Studies.get_run(run.id)
 
