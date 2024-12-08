@@ -19,6 +19,7 @@ defmodule LocalWeb.Router do
 
     get "/", PageController, :home
     live "/port", PortPage
+    live "/local", LocalPage
   end
 
   # Other scopes may use custom stacks.

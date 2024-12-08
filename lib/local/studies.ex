@@ -74,6 +74,17 @@ defmodule Local.Studies do
   end
 
   # get functions
+  
+  def get_all_studies() do
+    Repo.all(Local.Schema.Study) 
+  end
+
+  def get_all_runs(study_id) do
+    from(r in Run,
+      where: r.study_id == ^study_id
+    )
+    |> Repo.all()
+  end
 
   def get_run(nil) do nil end
   def get_run(run_id) do
@@ -114,54 +125,4 @@ defmodule Local.Studies do
   end
 
 end
-
-
-
-# Playground testing code
-
-#Local.Studies.initialize_study("test", 10)
-
-#MyMutex.Repo.delete_all(MyMutex.Study)
-#MyMutex.Repo.all(MyMutex.Run)
-
-
-#test = fn (id) ->
-#  %MyMutex.Study{}
-#  |> MyMutex.Study.changeset(%{id: id})
-#  |> MyMutex.Repo.insert()
-#end
-#
-#test.("asd")
-#
-## see how the upsert works
-#MyMutex.Studies.upsert_participant("asd")
-#MyMutex.Repo.all(MyMutex.Participant)
-#
-#MyMutex.Studies.create_study("test study", %{description: "yolo"})
-#MyMutex.Repo.all(MyMutex.Study)
-#
-#MyMutex.Studies.create_run("test study")
-#MyMutex.Repo.all(MyMutex.Run)
-#
-#import Ecto.Query
-#run = MyMutex.Run |> first() |> MyMutex.Repo.one()
-#
-##MyMutex.Studies.update_run(run, %{model: "cool_model2"})
-#update = %{participant_id: "asd", run_id: run.id}
-#MyMutex.Studies.create_update(update)
-#
-#MyMutex.Studies.get_uncompleted_runs("test study", "asd")
-#
-#MyMutex.Repo.all(MyMutex.Update)
-#
-#
-#MyMutex.Studies.is_run_updated_by_participant?("14d6365c-6401-4c02-b542-db86ab74626a", "asd")
-#MyMutex.Studies.get_run("14d6365c-6401-4c02-b542-db86ab74626a")
-#
-# cascading works
-#MyMutex.Studies.delete_study("test study2")
-#MyMutex.Studies.delete_study("test study")
-
-#Local.Repo.all(Local.Schema.Run)
-
 

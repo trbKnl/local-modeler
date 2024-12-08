@@ -66,16 +66,6 @@ defmodule LocalWeb.PortPage do
   @impl true
   def render(assigns) do
     ~H"""
-      <button 
-        class="bg-red-500 text-white font-bold py-2 px-4 rounded"
-        phx-click="send_params"
-      >
-      </button>
-      <button 
-        class="bg-blue-500 text-white font-bold py-2 px-4 rounded"
-        phx-click="send_something_else"
-      >
-      </button>
       <div phx-update="ignore" phx-hook="FeldsparApp" id="asd" data-locale={"en"} data-src={@url}>
         <iframe class="w-full outline-none"></iframe>
       </div>
