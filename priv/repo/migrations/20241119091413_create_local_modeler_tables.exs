@@ -11,7 +11,7 @@ defmodule Local.Repo.Migrations.CreateLocalModelerTables do
 
     create table(:runs, primary_key: false) do
       add :id, :binary_id, primary_key: true
-      add :model, :string
+      add :model, :text
       add :check_value, :string, default: fragment("gen_random_uuid()")
       add :study_id, references(:studies, type: :string, on_delete: :delete_all)
 
