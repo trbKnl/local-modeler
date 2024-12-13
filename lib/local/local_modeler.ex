@@ -47,7 +47,7 @@ defmodule LocalModeler do
       Studies.create_update(updated_run.id, participant_id)
       MutexManager.release(updated_run.id)
 
-      Logger.info("[LocalModeler] Run id #{current_run.id} updated")
+      Logger.info("[LocalModeler] Run id: #{current_run.id}, was updated to model: #{updated_run.model}, by: #{participant_id}")
       create_payload("PayloadString", "run id was updated")
     else
       _ -> 
