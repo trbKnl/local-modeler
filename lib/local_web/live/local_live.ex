@@ -64,6 +64,16 @@ defmodule LocalWeb.LocalPage do
     {:noreply, updated_socket}
   end
 
+  @impl true
+  def handle_event("download_study", %{"value" => id}, socket) do
+    IO.puts(id)
+    {file_name, content} = Studies.export_study_runs(id)
+    File.write(Path.join(get_static_exports_dir(), file_name), content)
+
+    # TDOD: perform some cleanup
+    {:noreply, push_event(socket, "download_study", %{uri: Path.join("exports", file_name)})}
+  end
+
   # TODO: decompose this render into multiple small ones, for composability
   @impl true
   def render(assigns) do
@@ -112,10 +122,20 @@ defmodule LocalWeb.LocalPage do
         </.simple_form>
 
         <div :if={@select_study.params["selected_study"] != ""}>
-          <div class="text-xl font-semibold border-b mb-5" >Delete study</div>
+
+          <div class="text-xl font-semibold border-b mb-5" >Download study</div>
+          <.button 
+            name="download_button"
+            phx-click="download_study"
+            value={@select_study.params["selected_study"]}
+          >
+            Download Study
+          </.button>
+
+          <div class="text-xl font-semibold border-b mb-5 mt-10" >Delete study</div>
           <.button 
             name="delete_button"
-            data-confirm="Are you sure?" 
+            data-confirm="Are you sure you want to delete this study?" 
             phx-click="delete_study"
             value={@select_study.params["selected_study"]}
           >
@@ -207,6 +227,10 @@ defmodule LocalWeb.LocalPage do
     |> update(key, fn form ->
       put_in(form, [Access.key!(nested_key)], value)
     end)
+  end
+
+  defp get_static_exports_dir() do
+    Path.join(:code.priv_dir(:local), "static/exports")
   end
 end
 

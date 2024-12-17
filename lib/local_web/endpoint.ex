@@ -23,7 +23,10 @@ defmodule LocalWeb.Endpoint do
     at: "/",
     from: :local,
     gzip: false,
-    only: LocalWeb.static_paths()
+    only: LocalWeb.static_paths(),
+    content_types: %{
+      "application/zip" => "zip"
+    }
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

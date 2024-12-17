@@ -84,6 +84,7 @@ defmodule Local.Studies do
       where: r.study_id == ^study_id
     )
     |> Repo.all()
+    |> Repo.preload([:updates])
   end
 
   def get_run(nil) do nil end
@@ -124,5 +125,25 @@ defmodule Local.Studies do
     |> Repo.delete()
   end
 
-end
+  # Export to zip functions
 
+  def export_study_runs(study_id) do
+    get_all_runs(study_id) 
+    |> create_files(fn x -> x.id <> ".json" end, fn x -> x |> Jason.encode!() end)
+    |> create_in_memory_zip(study_id <> "_study.zip")
+  end
+
+  def create_files(objects, filename_fun, data_fun) do
+    Enum.map(objects, fn o -> {filename_fun.(o), data_fun.(o)} end)
+  end
+
+  def create_in_memory_zip(files, filename) do
+    zipped_files = Enum.map(files, fn {filename, content} -> 
+      {String.to_charlist(filename), content} 
+    end)
+
+    {:ok, zip_content} = :zip.zip(filename, zipped_files, [:memory])
+
+    zip_content # {filename, bytes}
+  end
+end
