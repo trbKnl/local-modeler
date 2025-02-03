@@ -12,8 +12,9 @@ export const FeldsparApp = {
     // send Phoenix event to Port
     window.addEventListener("phx:to_feldspar_event", function(event) {
       const action = event.detail.action
+      const action_id = event.detail.action_id
       const data = event.detail.data
-      iframe.contentWindow.postMessage({ action, data })
+      iframe.contentWindow.postMessage({ action, action_id, data })
     })
 
     window.addEventListener("message", function(event) {

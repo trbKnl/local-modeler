@@ -29,8 +29,9 @@ defmodule LocalWeb.PortPage do
         %{assigns: %{query_params: %{"participantId" => participant_id}}} = socket
       ) do
     run = LocalModeler.get(study_id, participant_id)
+    IO.inspect(params)
 
-    send_data(socket, params["__type__"], run)
+    send_data(socket, params["__type__"], params["action_id"], run)
   end
 
   @impl true
@@ -49,7 +50,7 @@ defmodule LocalWeb.PortPage do
       %Run{id: run_id, model: model, check_value: check_value, study_id: study_id}
       |> LocalModeler.put(participant_id)
 
-    send_data(socket, params["__type__"], response)
+    send_data(socket, params["__type__"], params["action_id"], response)
   end
 
   @impl true
@@ -71,7 +72,7 @@ defmodule LocalWeb.PortPage do
     """
   end
 
-  defp send_data(socket, action, data) do
-    {:noreply, push_event(socket, "to_feldspar_event", %{action: action, data: data})}
+  defp send_data(socket, action, action_id, data) do
+    {:noreply, push_event(socket, "to_feldspar_event", %{action: action, action_id: action_id, data: data})}
   end
 end

@@ -18,7 +18,7 @@ defmodule LocalModeler do
         create_payload("PayloadError", "No runs left, participant is done")
 
       {:ok, run_id} ->
-        Logger.info("[LocalModeler] Sending run id #{run_id} to #{participant_id}")
+        Logger.info("[LocalModeler] Sending run id #{run_id} to #{participant_id}, run: #{Studies.get_run(run_id) |> Jason.encode!()}")
         create_payload("[LocalModeler] PayloadString", Studies.get_run(run_id) |> Jason.encode!())
 
       {_, error} ->

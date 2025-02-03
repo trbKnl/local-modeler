@@ -103,9 +103,9 @@ defmodule LocalWeb.LocalPage do
           <span>Current: <%= @new_study.params["n_runs"] %></span>
           <span>10</span>
         </div>
-        <.button type="submit" >
+        <button class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded" type="submit">
           Create Study
-        </.button>
+        </button>
       </.simple_form>
 
       <!-- Study selection -->
@@ -124,23 +124,23 @@ defmodule LocalWeb.LocalPage do
         <div :if={@select_study.params["selected_study"] != ""}>
 
           <div class="text-xl font-semibold border-b mb-5" >Download study</div>
-          <.button 
+          <button 
             name="download_button"
             phx-click="download_study"
             value={@select_study.params["selected_study"]}
           >
             Download Study
-          </.button>
+          </button>
 
           <div class="text-xl font-semibold border-b mb-5 mt-10" >Delete study</div>
-          <.button 
+          <button 
             name="delete_button"
             data-confirm="Are you sure you want to delete this study?" 
             phx-click="delete_study"
             value={@select_study.params["selected_study"]}
           >
             Delete Study
-          </.button>
+          </button>
 
           <!-- Run selection -->
           <div class="text-xl font-semibold border-b mt-10" >Inspect a run</div>
