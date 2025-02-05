@@ -129,6 +129,7 @@ defmodule Local.Studies do
 
   def export_study_runs(study_id) do
     get_all_runs(study_id) 
+    |> MapTransform.remove_structs() 
     |> create_files(fn x -> x.id <> ".json" end, fn x -> x |> Jason.encode!() end)
     |> create_in_memory_zip(study_id <> "_study.zip")
   end
@@ -147,3 +148,5 @@ defmodule Local.Studies do
     zip_content # {filename, bytes}
   end
 end
+
+
